@@ -12,6 +12,8 @@ namespace detail
 class binary_traits
 {
 public:
+    using char_type = std::byte;
+
 	static constexpr std::byte to_upper(std::byte c) noexcept {
 		return c;
 	}

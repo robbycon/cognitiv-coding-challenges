@@ -7,9 +7,9 @@ namespace dna
 {
 
 template<typename T>
-concept bool ByteBuffer = requires(T a) {
-	{ static_cast<std::size_t>(a.size()) } -> std::size_t;
-	{ a[0] } -> std::byte;
+concept ByteBuffer = requires(T a) {
+	{ static_cast<std::size_t>(a.size()) } -> std::convertible_to<std::size_t>;
+	{ a[0] } -> std::convertible_to<std::byte>;
 };
 
 template<ByteBuffer T>
