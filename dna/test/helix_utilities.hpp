@@ -5,6 +5,9 @@
 #include <vector>
 #include <sequence_buffer.hpp>
 
+namespace helix
+{
+
 // This function returns an ascending list of [start_idx, end_idx] intervals (inclusive) where differences
 // in data occur between parameters a and b.
 template<dna::ByteBuffer T>
@@ -31,3 +34,5 @@ std::vector<std::pair<uint64_t,uint64_t>> compare(const dna::sequence_buffer<T>&
 
 	return mismatched_intervals;
 }
+
+} // namespace helix
