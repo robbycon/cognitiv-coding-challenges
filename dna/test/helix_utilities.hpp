@@ -2,14 +2,16 @@
 
 #include <algorithm>
 #include <queue>
+#include <stdexcept>
 #include <utility>
 #include <vector>
+#include <person.hpp>
 #include <sequence_buffer.hpp>
 
 namespace helix
 {
 
-using interval = std::pair<uint64_t,uint64_t>;
+using interval = std::pair<std::size_t,std::size_t>;
 using interval_list = std::vector<interval>;
 
 // This function returns an ascending list of [start_idx, end_idx] intervals (inclusive) where differences
@@ -18,19 +20,22 @@ using interval_list = std::vector<interval>;
 // Time Complexity: O(min(m, n)) where m and n are the sizes of sequences a and b.
 // Space Complexity: O(k) where k is the number of mismatched intervals.
 template<dna::ByteBuffer T>
-interval_list compare(const dna::sequence_buffer<T>& a, const dna::sequence_buffer<T>& b, const uint64_t offset = 0) {
-	const uint64_t m = a.size(), n = b.size(), sz = std::min(m, n);
-	std::vector<std::pair<uint64_t,uint64_t>> mismatched_intervals;
+interval_list compare(const dna::sequence_buffer<T>& a, const dna::sequence_buffer<T>& b, const std::size_t offset = 0) {
+	if (offset < 0)
+		throw std::invalid_argument("offset cannot be less than 0");
 
-	for (uint64_t i = 0; i < sz; ++i) {
+	const std::size_t m = a.size(), n = b.size(), sz = std::min(m, n);
+	interval_list mismatched_intervals;
+
+	for (std::size_t i = 0; i < sz; ++i) {
 		if (a[i] != b[i]) {
-			const uint64_t start_idx = i;
+			const std::size_t start_idx = i;
 			while (i < sz - 1 && a[i + 1] != b[i + 1]) ++i;
 			mismatched_intervals.emplace_back(start_idx + offset, i + offset);
 		}
 	}
 
-	if (const uint64_t extra = std::max(m,n); extra > sz) {
+	if (const std::size_t extra = std::max(m,n); extra > sz) {
 		// If the last interval went to the end of the sequence, extend it
 		if (!mismatched_intervals.empty() && (mismatched_intervals.back().second - offset) == sz - 1)
 			mismatched_intervals.back().second = extra - 1 + offset;
@@ -53,7 +58,7 @@ interval_list compare(const dna::sequence_buffer<T>& a, const dna::sequence_buff
 // number of interval lists.
 interval_list combine(const std::vector<interval_list>& intervals) {
 	// Step 1: initialize a min heap to help combine different intervals from the different lists
-	using pq_item = std::tuple<interval,int,int>; // this contains [the interval, the index of its parent list, the index within that list]
+	using pq_item = std::tuple<interval,int,std::size_t>; // this contains [the interval, the index of its parent list, the index within that list]
 	const int k = intervals.size();
 	std::vector<pq_item> init;
 	for (int i = 0; i < k; ++i) {
@@ -81,6 +86,17 @@ interval_list combine(const std::vector<interval_list>& intervals) {
 	}
 
 	return result;
+}
+
+template<dna::Person P>
+interval_list compare_this(const P& a, const P& b, const std::size_t chromosome) {
+    if (chromosome >= a.chromosomes())
+        throw std::invalid_argument("chromosome number specified does not exist in Person a");
+    if (chromosome >= b.chromosomes())
+        throw std::invalid_argument("chromosome number specified does not exist in Person b");
+
+    interval_list result;
+    return result;
 }
 
 } // namespace helix
