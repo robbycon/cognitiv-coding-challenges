@@ -4,7 +4,6 @@
 #include <iostream>
 #include <memory>
 #include <queue>
-#include <ranges>
 #include <stdexcept>
 #include <string_view>
 #include <utility>
@@ -23,9 +22,9 @@ using interval_list = std::vector<interval>;
 // this sequence starts in the larger dataset (if applicable).
 // Time Complexity: O(min(m, n)) where m and n are the sizes of sequences a and b.
 // Space Complexity: O(k) where k is the number of mismatched intervals.
+template<typename T>
 //template<std::ranges::random_access_range T>
 //	requires std::ranges::sized_range<T>
-template<typename T>
 interval_list compare(const T& a, const T& b, const std::size_t offset = 0) {
 	if (offset < 0)
 		throw std::invalid_argument("offset cannot be less than 0");
@@ -58,10 +57,10 @@ interval_list compare(const T& a, const T& b, const std::size_t offset = 0) {
 // comparison data. These results could have a case where one segment's final interval was [x, y), and the
 // next adjacent segment's first interval was [y, z). The end result of this interval should actually be [x,z)
 // instead of {[x, y), [y, z)}. This function handles these cases, and performs the operation with O(nlogk) time
-// and O(n + k) space.
+// and O(m + k) space.
 // Time Complexity: O(nlogk) where n is the total number of intervals and k is the number of interval lists.
-// Space Complexity: O(n + k) where n is the total number of intervals (returned to the caller) and k is the
-// number of interval lists.
+// Space Complexity: O(m + k) where m is the total number of intervals returned to the caller (1 <= m <= n) and
+// k is the number of interval lists.
 interval_list combine(const std::vector<interval_list>& mismatched_intervals) {
 	// Step 1: initialize a min heap to help combine different intervals from the different lists
 	using pq_item = std::tuple<interval,int,std::size_t>; // this contains [the interval, the index of its parent list, the index within that list]
@@ -94,8 +93,15 @@ interval_list combine(const std::vector<interval_list>& mismatched_intervals) {
 	return result;
 }
 
+// This function reads the entire chosen chromosome stream from the person, and pipes it to the ostringstream
+// parameter. Parameter 'chromosome_idx' is zero-indexed.
 template<dna::Person P>
 void read(P& person, const std::size_t chromosome_idx, std::ostringstream& writer) {
+	if (chromosome_idx < 0)
+        throw std::invalid_argument("chromosome index cannot be negative");
+    if (chromosome_idx >= person.chromosomes())
+        throw std::invalid_argument("chromosome index specified does not exist in person");
+
 	auto chromosome = person.chromosome(chromosome_idx);
 	while (true) {
 		auto buffer = chromosome.read();
@@ -104,6 +110,10 @@ void read(P& person, const std::size_t chromosome_idx, std::ostringstream& write
 	}
 }
 
+// This function splits the string_view parameter 'sv' into segments of the specified 'window_size'. If
+// 'window_size' is <= 0, then the return will be a vector of size 1 containing the entire 'sv' range.
+// Otherwise, the vector will have 'window_size'-length ranges for all the elements except potentially
+// the final one, which could be smaller if 'sv' is not divisible by 'window_size'.
 std::vector<std::string_view> split(const std::string_view& sv, int window_size) {
 	const int n = sv.size();
 	// If the requested window size is negative or 0, create a single segment.
@@ -117,26 +127,42 @@ std::vector<std::string_view> split(const std::string_view& sv, int window_size)
 	return segments;
 }
 
+// This function compares a specified chromosome of two people and returns a combined interval_list of
+// all the mismatches. It first reads the entire stream of data, strips the telomeres (TBD), creates and
+// dispatches 'window_size' segments to be compared, and combines the results to return to the caller.
 template<dna::Person P>
 interval_list compare_chromosome(const P& a, const P& b, const std::size_t chromosome_idx, int window_size = -1) {
+	if (chromosome_idx < 0)
+        throw std::invalid_argument("chromosome index cannot be negative");
     if (chromosome_idx >= a.chromosomes())
-        throw std::invalid_argument("chromosome number specified does not exist in Person a");
+        throw std::invalid_argument("chromosome index specified does not exist in Person a");
     if (chromosome_idx >= b.chromosomes())
-        throw std::invalid_argument("chromosome number specified does not exist in Person b");
+        throw std::invalid_argument("chromosome index specified does not exist in Person b");
 
+	// Step 1: Read the chromosome streams from Persons 'a' and 'b'.
 	const auto chrom_data_a = std::make_unique<std::ostringstream>(),
 		chrom_data_b = std::make_unique<std::ostringstream>();
 	read(a, chromosome_idx, *chrom_data_a); read(b, chromosome_idx, *chrom_data_b);
 
+	// Step 2: Strip the telomeres from the beginning and end of the chromosomes.
+	// Implementation TBD.
+
+	// Step 3: Split the valid chromosome data into 'window_size' chunks, which could be sent to
+	// their own thread or separate server for independent processing in step 4.
 	std::vector<std::string_view> segments_a = split(chrom_data_a->view(), window_size),
 		segments_b = split(chrom_data_b->view(), window_size);
 
+	// Step 4: This loop would be replaced by a dispatcher to send these segments to their own
+	// thread or server, which would call a single 'compare(segment_a, segment_b, curr_offset)'
+	// and return their results to be collected here in 'mismatched_intervals'.
 	const int n = std::max(segments_a.size(), segments_b.size());
 	std::vector<interval_list> mismatched_intervals;
 	for (int i = 0; i < n; ++i) {
 		mismatched_intervals.emplace_back(compare(segments_a[i], segments_b[i], i * window_size));
 	}
 
+	// Step 5: This combines the mismatched chromosome ranges from the separate threads/servers
+	// in step 4 to return a unified result to the caller.
 	return combine(mismatched_intervals);
 }
 
