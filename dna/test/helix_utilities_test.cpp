@@ -11,6 +11,7 @@ TEST_CASE("Sequence buffer compare all equal", "[helix utils]")
 	dna::sequence_buffer buf1(data), buf2(data);
 	
 	const auto mismatched_intervals = helix::compare(buf1, buf2);
+
 	REQUIRE(mismatched_intervals.size() == 0);
 }
 
@@ -26,6 +27,7 @@ TEST_CASE("Sequence buffer compare 1 mismatch at beginning", "[helix utils]")
 	dna::sequence_buffer buf1(data1), buf2(data2);
 	
 	const auto mismatched_intervals = helix::compare(buf1, buf2);
+
 	REQUIRE(mismatched_intervals.size() == 1);
 	REQUIRE(mismatched_intervals[0].first == 0);
 	REQUIRE(mismatched_intervals[0].second == 0);
@@ -43,6 +45,7 @@ TEST_CASE("Sequence buffer compare 1 mismatch with length 2 in middle", "[helix 
 	dna::sequence_buffer buf1(data1), buf2(data2);
 	
 	const auto mismatched_intervals = helix::compare(buf1, buf2);
+
 	REQUIRE(mismatched_intervals.size() == 1);
 	REQUIRE(mismatched_intervals[0].first == 2);
 	REQUIRE(mismatched_intervals[0].second == 3);
@@ -60,6 +63,7 @@ TEST_CASE("Sequence buffer compare 1 mismatch at end", "[helix utils]")
 	dna::sequence_buffer buf1(data1), buf2(data2);
 	
 	const auto mismatched_intervals = helix::compare(buf1, buf2);
+
 	REQUIRE(mismatched_intervals.size() == 1);
 	REQUIRE(mismatched_intervals[0].first == 7);
 	REQUIRE(mismatched_intervals[0].second == 7);
@@ -78,6 +82,7 @@ TEST_CASE("Sequence buffer compare all equal but different lengths", "[helix uti
 	dna::sequence_buffer buf1(data1), buf2(data2);
 	
 	const auto mismatched_intervals = helix::compare(buf1, buf2);
+
 	REQUIRE(mismatched_intervals.size() == 1);
 	REQUIRE(mismatched_intervals[0].first == 8);
 	REQUIRE(mismatched_intervals[0].second == 11);
@@ -96,6 +101,7 @@ TEST_CASE("Sequence buffer compare 1 mismatch at end and different lengths", "[h
 	dna::sequence_buffer buf1(data1), buf2(data2);
 	
 	const auto mismatched_intervals = helix::compare(buf1, buf2);
+
 	REQUIRE(mismatched_intervals.size() == 1);
 	REQUIRE(mismatched_intervals[0].first == 7);
 	REQUIRE(mismatched_intervals[0].second == 11);
@@ -105,10 +111,11 @@ TEST_CASE("Sequence buffer combine non-overlapping intervals", "[helix utils]")
 {
     const std::vector<helix::interval_list> intervals = {
         {{1,1},{3,3}},
-        {{2,2},{4,4}}
+        {{2,2},{4,4}},
     };
 
     const auto mismatched_intervals = helix::combine(intervals);
+
     REQUIRE(mismatched_intervals.size() == 4);
     REQUIRE(mismatched_intervals[0].first == 1);
     REQUIRE(mismatched_intervals[0].second == 1);
@@ -118,4 +125,25 @@ TEST_CASE("Sequence buffer combine non-overlapping intervals", "[helix utils]")
     REQUIRE(mismatched_intervals[2].second == 3);
     REQUIRE(mismatched_intervals[3].first == 4);
     REQUIRE(mismatched_intervals[3].second == 4);
+}
+
+TEST_CASE("Sequence buffer combine overlapping intervals", "[helix utils]")
+{
+    const std::vector<helix::interval_list> intervals = {
+        {{1,2},{3,3}},
+        {{3,5},{7,9}},
+        {{9,12},{14,14}},
+    };
+
+    const auto mismatched_intervals = helix::combine(intervals);
+
+    REQUIRE(mismatched_intervals.size() == 4);
+    REQUIRE(mismatched_intervals[0].first == 1);
+    REQUIRE(mismatched_intervals[0].second == 2);
+    REQUIRE(mismatched_intervals[1].first == 3);
+    REQUIRE(mismatched_intervals[1].second == 5);
+    REQUIRE(mismatched_intervals[2].first == 7);
+    REQUIRE(mismatched_intervals[2].second == 12);
+    REQUIRE(mismatched_intervals[3].first == 14);
+    REQUIRE(mismatched_intervals[3].second == 14);
 }
