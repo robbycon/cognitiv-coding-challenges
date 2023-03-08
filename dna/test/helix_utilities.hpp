@@ -13,11 +13,12 @@ using interval = std::pair<uint64_t,uint64_t>;
 using interval_list = std::vector<interval>;
 
 // This function returns an ascending list of [start_idx, end_idx] intervals (inclusive) where differences
-// in data occur between parameters a and b.
+// in data occur between parameters a and b. The optional 'offset' parameter indicates where this sequence
+// starts in the larger dataset (if applicable).
 // Time Complexity: O(min(m, n)) where m and n are the sizes of sequences a and b.
 // Space Complexity: O(k) where k is the number of mismatched intervals.
 template<dna::ByteBuffer T>
-interval_list compare(const dna::sequence_buffer<T>& a, const dna::sequence_buffer<T>& b) {
+interval_list compare(const dna::sequence_buffer<T>& a, const dna::sequence_buffer<T>& b, const uint64_t offset = 0) {
 	const uint64_t m = a.size(), n = b.size(), sz = std::min(m, n);
 	std::vector<std::pair<uint64_t,uint64_t>> mismatched_intervals;
 
@@ -25,17 +26,17 @@ interval_list compare(const dna::sequence_buffer<T>& a, const dna::sequence_buff
 		if (a[i] != b[i]) {
 			const uint64_t start_idx = i;
 			while (i < sz - 1 && a[i + 1] != b[i + 1]) ++i;
-			mismatched_intervals.emplace_back(start_idx, i);
+			mismatched_intervals.emplace_back(start_idx + offset, i + offset);
 		}
 	}
 
 	if (const uint64_t extra = std::max(m,n); extra > sz) {
 		// If the last interval went to the end of the sequence, extend it
-		if (!mismatched_intervals.empty() && mismatched_intervals.back().second == sz - 1)
-			mismatched_intervals.back().second = extra - 1;
+		if (!mismatched_intervals.empty() && (mismatched_intervals.back().second - offset) == sz - 1)
+			mismatched_intervals.back().second = extra - 1 + offset;
 		// Otherwise, add the extra buffer as a new interval
 		else
-			mismatched_intervals.emplace_back(sz, extra - 1);
+			mismatched_intervals.emplace_back(sz + offset, extra - 1 + offset);
 	}
 
 	return mismatched_intervals;
