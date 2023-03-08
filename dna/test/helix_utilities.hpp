@@ -18,9 +18,9 @@ namespace helix
 using interval = std::pair<std::size_t,std::size_t>;
 using interval_list = std::vector<interval>;
 
-// This function returns an ascending list of [start_idx, end_idx] intervals (inclusive) where differences
-// in data occur between parameters a and b. The optional 'offset' parameter indicates where this sequence
-// starts in the larger dataset (if applicable).
+// This function returns an ascending list of [start_idx, end_idx) intervals (inclusive start, exclusive end)
+// where differences in data occur between parameters a and b. The optional 'offset' parameter indicates where
+// this sequence starts in the larger dataset (if applicable).
 // Time Complexity: O(min(m, n)) where m and n are the sizes of sequences a and b.
 // Space Complexity: O(k) where k is the number of mismatched intervals.
 //template<std::ranges::random_access_range T>
@@ -36,18 +36,18 @@ interval_list compare(const T& a, const T& b, const std::size_t offset = 0) {
 	for (std::size_t i = 0; i < sz; ++i) {
 		if (a[i] != b[i]) {
 			const std::size_t start_idx = i;
-			while (i < sz - 1 && a[i + 1] != b[i + 1]) ++i;
+			while (++i < sz && a[i] != b[i]);
 			mismatched_intervals.emplace_back(start_idx + offset, i + offset);
 		}
 	}
 
 	if (const std::size_t extra = std::max(m,n); extra > sz) {
 		// If the last interval went to the end of the sequence, extend it
-		if (!mismatched_intervals.empty() && (mismatched_intervals.back().second - offset) == sz - 1)
-			mismatched_intervals.back().second = extra - 1 + offset;
+		if (!mismatched_intervals.empty() && (mismatched_intervals.back().second - offset) == sz)
+			mismatched_intervals.back().second = extra + offset;
 		// Otherwise, add the extra buffer as a new interval
 		else
-			mismatched_intervals.emplace_back(sz + offset, extra - 1 + offset);
+			mismatched_intervals.emplace_back(sz + offset, extra + offset);
 	}
 
 	return mismatched_intervals;
@@ -55,9 +55,9 @@ interval_list compare(const T& a, const T& b, const std::size_t offset = 0) {
 
 // This function takes a group of sorted interval_list objects and combines them into a single interval_list.
 // A typical use case would be to call the helix::compare function over different segments of a larger set of
-// comparison data. These results could have a case where one segment's final interval was [x, y], and the
-// next adjacent segment's first interval was [y, z]. The end result of this interval should actually be [x,z]
-// instead of [[x, y], [y, z]]. This function handles these cases, and performs the operation with O(nlogk) time
+// comparison data. These results could have a case where one segment's final interval was [x, y), and the
+// next adjacent segment's first interval was [y, z). The end result of this interval should actually be [x,z)
+// instead of {[x, y), [y, z)}. This function handles these cases, and performs the operation with O(nlogk) time
 // and O(n + k) space.
 // Time Complexity: O(nlogk) where n is the total number of intervals and k is the number of interval lists.
 // Space Complexity: O(n + k) where n is the total number of intervals (returned to the caller) and k is the
