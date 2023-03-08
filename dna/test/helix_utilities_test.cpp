@@ -219,7 +219,7 @@ TEST_CASE("Read Chromosome from 2 Persons and compare, all equal", "[helix utils
     REQUIRE(ss1.view() == "CCGGTGATATTGATTTGATCTGTCCATCCGCA");
     REQUIRE(ss2.view() == "CCGGTGATATTGATTTGATCTGTCCATCCGCA");
 
-    const auto mismatched_intervals = helix::compare(person1, person2, 0);
+    const auto mismatched_intervals = helix::compare_chromosome(person1, person2, 0);
 
     REQUIRE(mismatched_intervals.size() == 0);
 }
@@ -247,7 +247,7 @@ TEST_CASE("Read Chromosome from 2 Persons and compare, 1 mismatch at end", "[hel
     REQUIRE(ss1.view() == "CCGGTGATATTGATTTGATCTGTCCATCCGCA");
     REQUIRE(ss2.view() == "CCGGTGATATTGATTTGATCTGTCCATCCGCC");
 
-    const auto mismatched_intervals = helix::compare(person1, person2, 0);
+    const auto mismatched_intervals = helix::compare_chromosome(person1, person2, 0);
 
     REQUIRE(mismatched_intervals.size() == 1);
     REQUIRE(mismatched_intervals[0].first == 31);
@@ -269,7 +269,7 @@ TEST_CASE("Person compare all equal", "[helix utils]")
         data, data, data, data, data, data, data
     }, chunk_size);
 
-    const auto mismatched_intervals = helix::compare(person1, person2, 0);
+    const auto mismatched_intervals = helix::compare_chromosome(person1, person2, 0);
 
     REQUIRE(mismatched_intervals.size() == 0);
 }

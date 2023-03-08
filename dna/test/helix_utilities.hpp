@@ -4,7 +4,9 @@
 #include <iostream>
 #include <memory>
 #include <queue>
+#include <ranges>
 #include <stdexcept>
+#include <string_view>
 #include <utility>
 #include <vector>
 #include <person.hpp>
@@ -21,8 +23,8 @@ using interval_list = std::vector<interval>;
 // starts in the larger dataset (if applicable).
 // Time Complexity: O(min(m, n)) where m and n are the sizes of sequences a and b.
 // Space Complexity: O(k) where k is the number of mismatched intervals.
-//template<dna::ByteBuffer T>
-//interval_list compare(const dna::sequence_buffer<T>& a, const dna::sequence_buffer<T>& b, const std::size_t offset = 0) {
+//template<std::ranges::random_access_range T>
+//	requires std::ranges::sized_range<T>
 template<typename T>
 interval_list compare(const T& a, const T& b, const std::size_t offset = 0) {
 	if (offset < 0)
@@ -60,14 +62,14 @@ interval_list compare(const T& a, const T& b, const std::size_t offset = 0) {
 // Time Complexity: O(nlogk) where n is the total number of intervals and k is the number of interval lists.
 // Space Complexity: O(n + k) where n is the total number of intervals (returned to the caller) and k is the
 // number of interval lists.
-interval_list combine(const std::vector<interval_list>& intervals) {
+interval_list combine(const std::vector<interval_list>& mismatched_intervals) {
 	// Step 1: initialize a min heap to help combine different intervals from the different lists
 	using pq_item = std::tuple<interval,int,std::size_t>; // this contains [the interval, the index of its parent list, the index within that list]
-	const int k = intervals.size();
+	const int k = mismatched_intervals.size();
 	std::vector<pq_item> init;
 	for (int i = 0; i < k; ++i) {
-		if (!intervals[i].empty())
-			init.emplace_back(intervals[i][0], i, 0);
+		if (!mismatched_intervals[i].empty())
+			init.emplace_back(mismatched_intervals[i][0], i, 0);
 	}
 
 	const auto cmp = [](const pq_item& a, const pq_item& b) {
@@ -85,8 +87,8 @@ interval_list combine(const std::vector<interval_list>& intervals) {
 		else
 			result.emplace_back(std::move(interval));
 		
-		if (list_idx + 1 < intervals[parent_idx].size())
-			pq.emplace(intervals[parent_idx][list_idx + 1], parent_idx, list_idx + 1);
+		if (list_idx + 1 < mismatched_intervals[parent_idx].size())
+			pq.emplace(mismatched_intervals[parent_idx][list_idx + 1], parent_idx, list_idx + 1);
 	}
 
 	return result;
@@ -102,19 +104,40 @@ void read(P& person, const std::size_t chromosome_idx, std::ostringstream& write
 	}
 }
 
+std::vector<std::string_view> split(const std::string_view& sv, int window_size) {
+	const int n = sv.size();
+	// If the requested window size is negative or 0, create a single segment.
+	if (window_size <= 0)
+		window_size = n;
+
+	std::vector<std::string_view> segments;
+	for (int i = 0; i < n; i += window_size)
+		segments.push_back(sv.substr(i, window_size));
+
+	return segments;
+}
+
 template<dna::Person P>
-interval_list compare(const P& a, const P& b, const std::size_t chromosome_idx) {
+interval_list compare_chromosome(const P& a, const P& b, const std::size_t chromosome_idx, int window_size = -1) {
     if (chromosome_idx >= a.chromosomes())
         throw std::invalid_argument("chromosome number specified does not exist in Person a");
     if (chromosome_idx >= b.chromosomes())
         throw std::invalid_argument("chromosome number specified does not exist in Person b");
 
-	const auto chrom_data_a = std::make_unique<std::ostringstream>(), chrom_data_b = std::make_unique<std::ostringstream>();
-	read(a, chromosome_idx, *chrom_data_a);
-	read(b, chromosome_idx, *chrom_data_b);
+	const auto chrom_data_a = std::make_unique<std::ostringstream>(),
+		chrom_data_b = std::make_unique<std::ostringstream>();
+	read(a, chromosome_idx, *chrom_data_a); read(b, chromosome_idx, *chrom_data_b);
 
-	interval_list result = compare(chrom_data_a->view(), chrom_data_b->view());
-	return result;
+	std::vector<std::string_view> segments_a = split(chrom_data_a->view(), window_size),
+		segments_b = split(chrom_data_b->view(), window_size);
+
+	const int n = std::max(segments_a.size(), segments_b.size());
+	std::vector<interval_list> mismatched_intervals;
+	for (int i = 0; i < n; ++i) {
+		mismatched_intervals.emplace_back(compare(segments_a[i], segments_b[i], i * window_size));
+	}
+
+	return combine(mismatched_intervals);
 }
 
 } // namespace helix
