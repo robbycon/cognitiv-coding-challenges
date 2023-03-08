@@ -1,6 +1,7 @@
 #pragma once
 
 #include <algorithm>
+#include <queue>
 #include <utility>
 #include <vector>
 #include <sequence_buffer.hpp>
@@ -8,10 +9,13 @@
 namespace helix
 {
 
+using interval = std::pair<uint64_t,uint64_t>;
+using interval_list = std::vector<interval>;
+
 // This function returns an ascending list of [start_idx, end_idx] intervals (inclusive) where differences
 // in data occur between parameters a and b.
 template<dna::ByteBuffer T>
-std::vector<std::pair<uint64_t,uint64_t>> compare(const dna::sequence_buffer<T>& a, const dna::sequence_buffer<T>& b) {
+interval_list compare(const dna::sequence_buffer<T>& a, const dna::sequence_buffer<T>& b) {
 	const uint64_t m = a.size(), n = b.size(), sz = std::min(m, n);
 	std::vector<std::pair<uint64_t,uint64_t>> mismatched_intervals;
 
@@ -33,6 +37,38 @@ std::vector<std::pair<uint64_t,uint64_t>> compare(const dna::sequence_buffer<T>&
 	}
 
 	return mismatched_intervals;
+}
+
+interval_list combine(const std::vector<interval_list>& intervals) {
+	// Step 1: initialize a min heap to help combine different intervals from the different lists
+	using pq_item = std::tuple<interval,int,int>; // this contains [the interval, the index of its parent list, the index within that list]
+	const int n = intervals.size();
+	std::vector<pq_item> init;
+	for (int i = 0; i < n; ++i) {
+		if (!intervals[i].empty())
+			init.emplace_back(intervals[i][0], i, 0);
+	}
+
+	const auto cmp = [](const pq_item& a, const pq_item& b) {
+		return std::get<0>(a).first > std::get<0>(b).first;
+	};
+
+	std::priority_queue<pq_item,std::vector<pq_item>,decltype(cmp)> pq(init.begin(), init.end(), cmp);
+
+	// Step 2: extract next mismatched interval, and combine with the previously seen one if applicable
+	interval_list result;
+	while (!pq.empty()) {
+		const auto [interval, parent_idx, list_idx] = pq.top(); pq.pop();
+		if (!result.empty() && result.back().second >= interval.first)
+			result.back().second = std::max(result.back().second, interval.second);
+		else
+			result.emplace_back(std::move(interval));
+		
+		if (list_idx + 1 < intervals[parent_idx].size())
+			pq.emplace(intervals[parent_idx][list_idx + 1], parent_idx, list_idx + 1);
+	}
+
+	return result;
 }
 
 } // namespace helix
