@@ -264,63 +264,6 @@ TEST_CASE("Split Chromosome from Person 4 segments", "[helix utils]")
     REQUIRE(segments[3] == "CATCCGCA");
 }
 
-TEST_CASE("Read Chromosome from 2 Persons and compare, all equal", "[helix utils]")
-{
-    const auto data = to_byte({0x5a, 0xe3, 0x3e, 0x3f, 0x8d, 0xed, 0x4d, 0x64});
-    const std::size_t chunk_size = 4;
-    fake_person person1(std::array<std::vector<std::byte>, 23> {
-        data, data, data, data, data, data, data, data,
-        data, data, data, data, data, data, data, data,
-        data, data, data, data, data, data, data
-    }, chunk_size),
-    person2(std::array<std::vector<std::byte>, 23> {
-        data, data, data, data, data, data, data, data,
-        data, data, data, data, data, data, data, data,
-        data, data, data, data, data, data, data
-    }, chunk_size);
-    
-    std::ostringstream ss1, ss2;
-    helix::read(person1, 0, ss1);
-    helix::read(person2, 0, ss2);
-    
-    REQUIRE(ss1.view() == "CCGGTGATATTGATTTGATCTGTCCATCCGCA");
-    REQUIRE(ss2.view() == "CCGGTGATATTGATTTGATCTGTCCATCCGCA");
-
-    const auto mismatched_intervals = helix::compare_chromosome(person1, person2, 0);
-
-    REQUIRE(mismatched_intervals.size() == 0);
-}
-
-TEST_CASE("Read Chromosome from 2 Persons and compare, 1 mismatch at end", "[helix utils]")
-{
-    const auto data1 = to_byte({0x5a, 0xe3, 0x3e, 0x3f, 0x8d, 0xed, 0x4d, 0x64}),
-    data2 = to_byte({0x5a, 0xe3, 0x3e, 0x3f, 0x8d, 0xed, 0x4d, 0x65});
-    const std::size_t chunk_size = 4;
-    fake_person person1(std::array<std::vector<std::byte>, 23> {
-        data1, data1, data1, data1, data1, data1, data1, data1,
-        data1, data1, data1, data1, data1, data1, data1, data1,
-        data1, data1, data1, data1, data1, data1, data1
-    }, chunk_size),
-    person2(std::array<std::vector<std::byte>, 23> {
-        data2, data2, data2, data2, data2, data2, data2, data2,
-        data2, data2, data2, data2, data2, data2, data2, data2,
-        data2, data2, data2, data2, data2, data2, data2
-    }, chunk_size);
-    
-    std::ostringstream ss1, ss2;
-    helix::read(person1, 0, ss1);
-    helix::read(person2, 0, ss2);
-    
-    REQUIRE(ss1.view() == "CCGGTGATATTGATTTGATCTGTCCATCCGCA");
-    REQUIRE(ss2.view() == "CCGGTGATATTGATTTGATCTGTCCATCCGCC");
-
-    const auto mismatched_intervals = helix::compare_chromosome(person1, person2, 0);
-
-    REQUIRE(mismatched_intervals.size() == 1);
-    REQUIRE(mismatched_intervals[0].first == 31);
-    REQUIRE(mismatched_intervals[0].second == 31);
-}
-
 TEST_CASE("Person compare all equal", "[helix utils]")
 {
     const auto data = to_byte({0x5a, 0xe3, 0x3e, 0x3f, 0x8d, 0xed, 0x4d, 0x64});
@@ -339,4 +282,75 @@ TEST_CASE("Person compare all equal", "[helix utils]")
     const auto mismatched_intervals = helix::compare_chromosome(person1, person2, 0);
 
     REQUIRE(mismatched_intervals.size() == 0);
+}
+
+TEST_CASE("Read Chromosome from 2 Persons and compare, 1 mismatch at end", "[helix utils]")
+{
+    const auto data1 = to_byte({0x5a, 0xe3, 0x3e, 0x3f, 0x8d, 0xed, 0x4d, 0x64}),
+        data2 = to_byte({0x5a, 0xe3, 0x3e, 0x3f, 0x8d, 0xed, 0x4d, 0x65});
+    const std::size_t chunk_size = 4;
+    fake_person person1(std::array<std::vector<std::byte>, 23> {
+        data1, data1, data1, data1, data1, data1, data1, data1,
+        data1, data1, data1, data1, data1, data1, data1, data1,
+        data1, data1, data1, data1, data1, data1, data1
+    }, chunk_size),
+    person2(std::array<std::vector<std::byte>, 23> {
+        data2, data2, data2, data2, data2, data2, data2, data2,
+        data2, data2, data2, data2, data2, data2, data2, data2,
+        data2, data2, data2, data2, data2, data2, data2
+    }, chunk_size);
+
+    const auto mismatched_intervals = helix::compare_chromosome(person1, person2, 0);
+
+    REQUIRE(mismatched_intervals.size() == 1);
+    REQUIRE(mismatched_intervals[0].first == 31);
+    REQUIRE(mismatched_intervals[0].second == 31);
+}
+
+TEST_CASE("Read Chromosome from 2 Persons and compare, 2 separate mismatches", "[helix utils]")
+{
+    const auto data1 = to_byte({0x5a, 0xe3, 0x3e, 0x3f, 0x8d, 0xed, 0x4d, 0x64}),
+               data2 = to_byte({0x5a, 0xe3, 0x3e, 0x3e, 0x8d, 0xed, 0x4d, 0x65});
+    const std::size_t chunk_size = 4;
+    fake_person person1(std::array<std::vector<std::byte>, 23> {
+        data1, data1, data1, data1, data1, data1, data1, data1,
+        data1, data1, data1, data1, data1, data1, data1, data1,
+        data1, data1, data1, data1, data1, data1, data1
+    }, chunk_size),
+    person2(std::array<std::vector<std::byte>, 23> {
+        data2, data2, data2, data2, data2, data2, data2, data2,
+        data2, data2, data2, data2, data2, data2, data2, data2,
+        data2, data2, data2, data2, data2, data2, data2
+    }, chunk_size);
+
+    const auto mismatched_intervals = helix::compare_chromosome(person1, person2, 0);
+
+    REQUIRE(mismatched_intervals.size() == 2);
+    REQUIRE(mismatched_intervals[0].first == 15);
+    REQUIRE(mismatched_intervals[0].second == 15);
+    REQUIRE(mismatched_intervals[1].first == 31);
+    REQUIRE(mismatched_intervals[1].second == 31);
+}
+
+TEST_CASE("Read Chromosome from 2 Persons and compare, 1 mismatch at end combined from segments", "[helix utils]")
+{
+    const auto data1 = to_byte({0x5a, 0xe3, 0x3e, 0x3f, 0x8d, 0xed, 0x4d, 0x64}),
+               data2 = to_byte({0x5a, 0xe3, 0x3e, 0x3e, 0x0d, 0xed, 0x4d, 0x64});
+    const std::size_t chunk_size = 4;
+    fake_person person1(std::array<std::vector<std::byte>, 23> {
+        data1, data1, data1, data1, data1, data1, data1, data1,
+        data1, data1, data1, data1, data1, data1, data1, data1,
+        data1, data1, data1, data1, data1, data1, data1
+    }, chunk_size),
+    person2(std::array<std::vector<std::byte>, 23> {
+        data2, data2, data2, data2, data2, data2, data2, data2,
+        data2, data2, data2, data2, data2, data2, data2, data2,
+        data2, data2, data2, data2, data2, data2, data2
+    }, chunk_size);
+
+    const auto mismatched_intervals = helix::compare_chromosome(person1, person2, 0);
+
+    REQUIRE(mismatched_intervals.size() == 1);
+    REQUIRE(mismatched_intervals[0].first == 15);
+    REQUIRE(mismatched_intervals[0].second == 16);
 }
