@@ -3,6 +3,7 @@
 #include "helix_utilities.hpp"
 #include <sequence_buffer.hpp>
 #include <iostream>
+#include <string_view>
 
 TEST_CASE("Sequence buffer compare all equal", "[helix utils]")
 {
@@ -195,6 +196,72 @@ TEST_CASE("Read Chromosome from Person", "[helix utils]")
     helix::read(person, 0, ss);
     
     REQUIRE(ss.view() == "CCGGTGATATTGATTTGATCTGTCCATCCGCA");
+}
+
+TEST_CASE("Split Chromosome from Person negative window size", "[helix utils]")
+{
+    const auto data = to_byte({0x5a, 0xe3, 0x3e, 0x3f, 0x8d, 0xed, 0x4d, 0x64});
+    const std::size_t chunk_size = 4;
+    fake_person person(std::array<std::vector<std::byte>, 23> {
+        data, data, data, data, data, data, data, data,
+        data, data, data, data, data, data, data, data,
+        data, data, data, data, data, data, data
+    }, chunk_size);
+
+    std::ostringstream ss;
+    helix::read(person, 0, ss);
+    
+    REQUIRE(ss.view() == "CCGGTGATATTGATTTGATCTGTCCATCCGCA");
+
+    const auto segments = helix::split(ss.view(), -1);
+
+    REQUIRE(segments.size() == 1);
+    REQUIRE(segments[0] == "CCGGTGATATTGATTTGATCTGTCCATCCGCA");
+}
+
+TEST_CASE("Split Chromosome from Person 0 window size", "[helix utils]")
+{
+    const auto data = to_byte({0x5a, 0xe3, 0x3e, 0x3f, 0x8d, 0xed, 0x4d, 0x64});
+    const std::size_t chunk_size = 4;
+    fake_person person(std::array<std::vector<std::byte>, 23> {
+        data, data, data, data, data, data, data, data,
+        data, data, data, data, data, data, data, data,
+        data, data, data, data, data, data, data
+    }, chunk_size);
+
+    std::ostringstream ss;
+    helix::read(person, 0, ss);
+    
+    REQUIRE(ss.view() == "CCGGTGATATTGATTTGATCTGTCCATCCGCA");
+
+    const auto segments = helix::split(ss.view(), 0);
+
+    REQUIRE(segments.size() == 1);
+    REQUIRE(segments[0] == "CCGGTGATATTGATTTGATCTGTCCATCCGCA");
+}
+
+TEST_CASE("Split Chromosome from Person 4 segments", "[helix utils]")
+{
+    const auto data = to_byte({0x5a, 0xe3, 0x3e, 0x3f, 0x8d, 0xed, 0x4d, 0x64});
+    const std::size_t chunk_size = 4;
+    fake_person person(std::array<std::vector<std::byte>, 23> {
+        data, data, data, data, data, data, data, data,
+        data, data, data, data, data, data, data, data,
+        data, data, data, data, data, data, data
+    }, chunk_size);
+
+    std::ostringstream ss;
+    helix::read(person, 0, ss);
+    
+    REQUIRE(ss.view() == "CCGGTGATATTGATTTGATCTGTCCATCCGCA");
+
+    const auto segments = helix::split(ss.view(), 8);
+
+    REQUIRE(segments.size() == 4);
+    REQUIRE(segments[0] == "CCGGTGAT");
+    REQUIRE(segments[1] == "ATTGATTT");
+    REQUIRE(segments[2] == "GATCTGTC");
+    REQUIRE(segments[3] == "CATCCGCA");
 }
 
 TEST_CASE("Read Chromosome from 2 Persons and compare, all equal", "[helix utils]")
