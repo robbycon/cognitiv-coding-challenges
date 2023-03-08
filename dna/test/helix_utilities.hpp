@@ -89,14 +89,16 @@ interval_list combine(const std::vector<interval_list>& intervals) {
 }
 
 template<dna::Person P>
-interval_list compare_this(const P& a, const P& b, const std::size_t chromosome) {
-    if (chromosome >= a.chromosomes())
+interval_list compare(const P& a, const P& b, const std::size_t chromosome_idx) {
+    if (chromosome_idx >= a.chromosomes())
         throw std::invalid_argument("chromosome number specified does not exist in Person a");
-    if (chromosome >= b.chromosomes())
+    if (chromosome_idx >= b.chromosomes())
         throw std::invalid_argument("chromosome number specified does not exist in Person b");
 
-    interval_list result;
-    return result;
+    auto chromosome_a = a.chromosome(chromosome_idx), chromosome_b = b.chromosome(chromosome_idx);
+
+	interval_list result;
+	return result;
 }
 
 } // namespace helix

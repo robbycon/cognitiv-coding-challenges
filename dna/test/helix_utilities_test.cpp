@@ -1,4 +1,5 @@
 #include "catch.hpp"
+#include "fake_person.hpp"
 #include "helix_utilities.hpp"
 #include <sequence_buffer.hpp>
 
@@ -168,4 +169,32 @@ TEST_CASE("Sequence buffer combine overlapping intervals", "[helix utils]")
     REQUIRE(mismatched_intervals[2].second == 12);
     REQUIRE(mismatched_intervals[3].first == 14);
     REQUIRE(mismatched_intervals[3].second == 14);
+}
+
+std::vector<std::byte> to_byte(std::initializer_list<int> il) {
+    const int n = il.size();
+    std::vector<std::byte> data(n);
+    int i = 0;
+    for (auto it = il.begin(); it != il.end(); ++it, ++i)
+        data[i] = static_cast<std::byte>(*it);
+    return data;
+}
+
+TEST_CASE("Person compare all equal", "[helix utils]")
+{
+    const auto data = to_byte({0x5a, 0xe3, 0x3e, 0x3f, 0x8d, 0xed, 0x4d, 0x64});
+    const std::size_t chunk_size = 4;
+    const fake_person person1(std::array<std::vector<std::byte>, 23> {
+        data, data, data, data, data, data, data, data,
+        data, data, data, data, data, data, data, data,
+        data, data, data, data, data, data, data
+    }, chunk_size),
+    person2(std::array<std::vector<std::byte>, 23> {
+        data, data, data, data, data, data, data, data,
+        data, data, data, data, data, data, data, data,
+        data, data, data, data, data, data, data
+    }, chunk_size);
+
+    const auto mismatched_intervals = helix::compare(person1, person2, 0);
+    REQUIRE(mismatched_intervals.size() == 0);
 }
