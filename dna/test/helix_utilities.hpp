@@ -1,6 +1,8 @@
 #pragma once
 
 #include <algorithm>
+#include <iostream>
+#include <memory>
 #include <queue>
 #include <stdexcept>
 #include <utility>
@@ -19,8 +21,10 @@ using interval_list = std::vector<interval>;
 // starts in the larger dataset (if applicable).
 // Time Complexity: O(min(m, n)) where m and n are the sizes of sequences a and b.
 // Space Complexity: O(k) where k is the number of mismatched intervals.
-template<dna::ByteBuffer T>
-interval_list compare(const dna::sequence_buffer<T>& a, const dna::sequence_buffer<T>& b, const std::size_t offset = 0) {
+//template<dna::ByteBuffer T>
+//interval_list compare(const dna::sequence_buffer<T>& a, const dna::sequence_buffer<T>& b, const std::size_t offset = 0) {
+template<typename T>
+interval_list compare(const T& a, const T& b, const std::size_t offset = 0) {
 	if (offset < 0)
 		throw std::invalid_argument("offset cannot be less than 0");
 
@@ -89,15 +93,27 @@ interval_list combine(const std::vector<interval_list>& intervals) {
 }
 
 template<dna::Person P>
+void read(P& person, const std::size_t chromosome_idx, std::ostringstream& writer) {
+	auto chromosome = person.chromosome(chromosome_idx);
+	while (true) {
+		auto buffer = chromosome.read();
+		if (buffer.size() == 0) break;
+		writer << buffer;
+	}
+}
+
+template<dna::Person P>
 interval_list compare(const P& a, const P& b, const std::size_t chromosome_idx) {
     if (chromosome_idx >= a.chromosomes())
         throw std::invalid_argument("chromosome number specified does not exist in Person a");
     if (chromosome_idx >= b.chromosomes())
         throw std::invalid_argument("chromosome number specified does not exist in Person b");
 
-    auto chromosome_a = a.chromosome(chromosome_idx), chromosome_b = b.chromosome(chromosome_idx);
+	const auto chrom_data_a = std::make_unique<std::ostringstream>(), chrom_data_b = std::make_unique<std::ostringstream>();
+	read(a, chromosome_idx, *chrom_data_a);
+	read(b, chromosome_idx, *chrom_data_b);
 
-	interval_list result;
+	interval_list result = compare(chrom_data_a->view(), chrom_data_b->view());
 	return result;
 }
 
