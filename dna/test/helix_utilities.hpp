@@ -14,6 +14,8 @@ using interval_list = std::vector<interval>;
 
 // This function returns an ascending list of [start_idx, end_idx] intervals (inclusive) where differences
 // in data occur between parameters a and b.
+// Time Complexity: O(min(m, n)) where m and n are the sizes of sequences a and b.
+// Space Complexity: O(k) where k is the number of mismatched intervals.
 template<dna::ByteBuffer T>
 interval_list compare(const dna::sequence_buffer<T>& a, const dna::sequence_buffer<T>& b) {
 	const uint64_t m = a.size(), n = b.size(), sz = std::min(m, n);
@@ -39,12 +41,21 @@ interval_list compare(const dna::sequence_buffer<T>& a, const dna::sequence_buff
 	return mismatched_intervals;
 }
 
+// This function takes a group of sorted interval_list objects and combines them into a single interval_list.
+// A typical use case would be to call the helix::compare function over different segments of a larger set of
+// comparison data. These results could have a case where one segment's final interval was [x, y], and the
+// next adjacent segment's first interval was [y, z]. The end result of this interval should actually be [x,z]
+// instead of [[x, y], [y, z]]. This function handles these cases, and performs the operation with O(nlogk) time
+// and O(n + k) space.
+// Time Complexity: O(nlogk) where n is the total number of intervals and k is the number of interval lists.
+// Space Complexity: O(n + k) where n is the total number of intervals (returned to the caller) and k is the
+// number of interval lists.
 interval_list combine(const std::vector<interval_list>& intervals) {
 	// Step 1: initialize a min heap to help combine different intervals from the different lists
 	using pq_item = std::tuple<interval,int,int>; // this contains [the interval, the index of its parent list, the index within that list]
-	const int n = intervals.size();
+	const int k = intervals.size();
 	std::vector<pq_item> init;
-	for (int i = 0; i < n; ++i) {
+	for (int i = 0; i < k; ++i) {
 		if (!intervals[i].empty())
 			init.emplace_back(intervals[i][0], i, 0);
 	}
