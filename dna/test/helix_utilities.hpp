@@ -86,6 +86,7 @@ interval_list combine(const std::vector<interval_list>& mismatched_intervals) {
 		else
 			result.emplace_back(std::move(interval));
 		
+		// Add the next interval from the interval_list of the current popped value to the min heap
 		if (list_idx + 1 < mismatched_intervals[parent_idx].size())
 			pq.emplace(mismatched_intervals[parent_idx][list_idx + 1], parent_idx, list_idx + 1);
 	}
@@ -117,13 +118,11 @@ void read(P& person, const std::size_t chromosome_idx, std::ostringstream& write
 std::vector<std::string_view> split(const std::string_view& sv, int window_size) {
 	const int n = sv.size();
 	// If the requested window size is negative or 0, create a single segment.
-	if (window_size <= 0)
-		window_size = n;
-
+	if (window_size <= 0) window_size = n;
 	std::vector<std::string_view> segments;
-	for (int i = 0; i < n; i += window_size)
+	for (int i = 0; i < n; i += window_size) {
 		segments.push_back(sv.substr(i, window_size));
-
+	}
 	return segments;
 }
 
@@ -149,16 +148,22 @@ interval_list compare_chromosome(const P& a, const P& b, const std::size_t chrom
 
 	// Step 3: Split the valid chromosome data into 'window_size' chunks, which could be sent to
 	// their own thread or separate server for independent processing in step 4.
-	std::vector<std::string_view> segments_a = split(chrom_data_a->view(), window_size),
+	const auto segments_a = split(chrom_data_a->view(), window_size),
 		segments_b = split(chrom_data_b->view(), window_size);
 
 	// Step 4: This loop would be replaced by a dispatcher to send these segments to their own
 	// thread or server, which would call a single 'compare(segment_a, segment_b, curr_offset)'
 	// and return their results to be collected here in 'mismatched_intervals'.
-	const int n = std::max(segments_a.size(), segments_b.size());
+	const auto m = segments_a.size(), n = segments_b.size(), sz = std::max(m, n);
 	std::vector<interval_list> mismatched_intervals;
-	for (int i = 0; i < n; ++i) {
-		mismatched_intervals.emplace_back(compare(segments_a[i], segments_b[i], i * window_size));
+	for (int i = 0; i < sz; ++i) {
+		mismatched_intervals.emplace_back(
+			compare(
+				i < m ? segments_a[i] : std::string_view(nullptr, 0),
+				i < n ? segments_b[i] : std::string_view(nullptr, 0),
+				i * window_size
+				)
+			);
 	}
 
 	// Step 5: This combines the mismatched chromosome ranges from the separate threads/servers

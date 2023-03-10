@@ -391,9 +391,6 @@ TEST_CASE("Read Chromosome from 2 Persons and compare, 1 mismatch at end combine
 
     const auto mismatched_intervals = helix::compare_chromosome(person1, person2, 0, 8);
 
-    for (const auto [s,e] : mismatched_intervals)
-        std::cout << "start: " << s << ", end: " << e << std::endl;
-
     REQUIRE(mismatched_intervals.size() == 1);
     REQUIRE(mismatched_intervals[0].first == 15);
     REQUIRE(mismatched_intervals[0].second == 17);
